@@ -29,11 +29,30 @@ button{border:0;border-radius:10px;padding:11px 14px;font:700 14px system-ui;cur
 .ac-item .remove{grid-column:1/-1;justify-self:end}
 @media(min-width:560px){.ac-item{grid-template-columns:85px 1fr 1fr 1.2fr auto}.ac-item .status{grid-column:auto}.ac-item .remove{grid-column:auto}}
 @media(max-width:380px){.wrap{padding:12px 8px}.card{padding:12px}.grid{gap:9px}input,select{padding:9px 8px;font-size:13px}}
+.auto-field{
+    position:relative;
+}
+
+.auto-field input{
+    padding-right:85px;
+    background:#f1f5f9;
+}
+
+.auto-field span{
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:10px;
+    font-weight:800;
+    color:#1769e0;
+    pointer-events:none;
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-<header><h1>QC Cutting</h1><p>Isi data, atur daftar AC, lalu salin laporan ke WhatsApp.</p></header>
+<header><h1>Template Laporan QC Cutting</h1><p>Isi data, atur daftar AC, lalu salin laporan ke WhatsApp.</p></header>
 
 <section class="card">
 <h2>Data umum</h2>
@@ -80,8 +99,21 @@ button{border:0;border-radius:10px;padding:11px 14px;font:700 14px system-ui;cur
 <section class="card">
 <h2>Laporan ke-2 · Rekap produksi</h2>
 <div class="grid">
-<div class="field"><label>Total produksi (pcs)</label><input id="total" type="number" value="57600"></div>
-<div class="field"><label>Bata OK (pcs)</label><input id="ok" type="number" value="57394"></div>
+<div class="field">
+    <label>Total produksi (pcs)</label>
+    <div class="auto-field">
+        <input id="total" type="number" value="57600" readonly>
+        <span>OTOMATIS</span>
+    </div>
+</div>
+
+<div class="field">
+    <label>Bata OK (pcs)</label>
+    <div class="auto-field">
+        <input id="ok" type="number" value="57394" readonly>
+        <span>OTOMATIS</span>
+    </div>
+</div>
 <div class="field"><label>MB acuan rendemen</label><input id="mb" type="number" value="160"></div>
 <div class="field"><label>Waste (pcs)</label><input id="waste2" value="1"></div>
 <div class="field"><label>Gompal (pcs)</label><input id="gomp2" value="81"></div>
@@ -226,8 +258,25 @@ function report1(){
 ${acText()}`;
 }
 function report2(){
- const c=common(),total=Number($('total').value)||0,ok=Number($('ok').value)||0,mb=Number($('mb').value)||0;
- const cacat=total-ok,rendemen=total>0?(ok/total*100):0;
+ const c=common(),
+ mb=Number($('mb').value)||0,
+total=mb*360;
+
+$('total').value=total;
+
+ // Hitung total bata cacat
+ const cacat=['waste2','gomp2','retak2','ttp2','dimensi2']
+ .reduce((sum,id)=>sum+(Number($(id).value)||0),0);
+
+ // Hitung bata OK otomatis
+ const ok=total-cacat;
+
+ // Masukkan hasil ke kolom Bata OK
+ $('ok').value=ok;
+
+ // Hitung rendemen
+ const rendemen=total>0?(ok/total*100):0;
+
  return `_*𝚜𝚑𝚒𝚏𝚝 ${c.shift} 𝙶𝚛𝚘𝚞𝚙 ${c.group}*_
 *${c.day}* _${c.date}_
 𝚃𝚘𝚝𝚊𝚕 𝚙𝚛𝚘𝚍𝚞𝚔𝚜𝚒 : ${total.toLocaleString('id-ID')}𝚙𝚌𝚜
@@ -249,7 +298,20 @@ async function copyReport(n){
  catch(e){const t=document.createElement('textarea');t.value=text;document.body.appendChild(t);t.select();document.execCommand('copy');t.remove();alert('Laporan ke-'+n+' berhasil disalin.');}
  showReport(n);
 }
-['total','ok','mb','date','day','shift','group'].forEach(id=>$(id).addEventListener('input',()=>{showReport(1);showReport(2)}));
+['date','day','shift','group'].forEach(id=>{
+    $(id).addEventListener('input',()=>{
+        showReport(1);
+        showReport(2);
+        saveData();
+    });
+});
+
+['mb','waste2','gomp2','retak2','ttp2','dimensi2'].forEach(id=>{
+    $(id).addEventListener('input',()=>{
+        showReport(2);
+        saveData();
+    });
+});
 // Muat data tersimpan, jika belum ada gunakan data awal
 if (!loadData()) {
 
